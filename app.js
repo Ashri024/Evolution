@@ -42,7 +42,14 @@ const io = socketIo(server,{
     }
 });
 
-// Socket.IO connection handler
+const userSocketMap = new Map();
+const connectedUserIDs = new Set();
+function getUserIdFromSocket(socket) {
+    return socket?.handshake.query.userId;
+}
+function getSocketIdByUserId(userId) {
+    return userSocketMap.get(userId);
+}
 io.on('connection', (socket) => {
     console.log("Socket connected: ", socket?.id);
     // Loading messages and marking the sent messages as delivered as the user is online now
@@ -164,6 +171,10 @@ async function userInitialization(userId){
                 if(getSocketIdByUserId(message.receiverId)){
                     message.status = 'delivered';
                     msg= await message.save();
+                    const receiverSocketId = getSocketIdByUserId(msg.receiverId);
+                    if (receiverSocketId) {
+                        socket.to(receiverSocketId).emit('new msg', msg);
+                    }
                 }else{
                     message.status = 'sent';
                     msg= await message.save();
