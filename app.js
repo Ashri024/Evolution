@@ -51,7 +51,6 @@ function getSocketIdByUserId(userId) {
     return userSocketMap.get(userId);
 }
 io.on('connection', (socket) => {
-    console.log("Socket connected: ", socket?.id);
     // Loading messages and marking the sent messages as delivered as the user is online now
     // io.emit("hello", "Hello from server");
     async function getReceivedMessages(userId) {
@@ -94,7 +93,6 @@ io.on('connection', (socket) => {
     }
     let lastMessages=[]
     socket.on("allUsers", async (users) => {
-        console.log("All users: ", users);
         for (let i = 0; i < users.length; i++) {
             const lastMessage= await extractLastMessage(userId, users[i]);
             if(lastMessage){
@@ -106,16 +104,13 @@ io.on('connection', (socket) => {
 async function userInitialization(userId){
     if(userId){
     connectedUserIDs.add(userId);
-    console.log('Connected users:', connectedUserIDs);
     let receivedMessages = await getUnreadMessages(userId);
-    console.log("recei ved messages: ", receivedMessages);
     io.emit('user connected', Array.from(connectedUserIDs),receivedMessages);
 }
 }
     userInitialization(userId);
  // if the user is online
     const fetchMessages = async (userId1, userId2) => {
-        console.log('Fetching messages between', userId1, 'and', userId2);
         try {
             const messages = await Message.find({
                 $or: [
@@ -133,7 +128,6 @@ async function userInitialization(userId){
     socket?.on('loadMessages', async ({ userId1, userId2 }) => {
         const messages = await fetchMessages(userId1, userId2);
         if (messages.length === 0) {
-            console.log('No messages found');
             messages.push({ message: 'No messages found',userId1, userId2, senderName: 'Server', receiverName: 'Server' });
         }
         socket?.emit('messages', messages);
@@ -154,7 +148,6 @@ async function userInitialization(userId){
         const receiverSocketId = getSocketIdByUserId(finalMsg.receiverId);
         
         if (receiverSocketId) {
-            console.log("Emitting to receiver");
             socket.to(receiverSocketId).emit("chat message", finalMsg);
         }
         socket.emit("chat message", finalMsg);
@@ -193,7 +186,6 @@ async function userInitialization(userId){
     // Update message status to 'read'
     socket?.on('message read', async (messageId) => {
         try {
-            console.log("Message read");
             if (!mongoose.Types.ObjectId.isValid(messageId)) {
                 throw new Error('Invalid messageId');
             }
@@ -213,7 +205,6 @@ async function userInitialization(userId){
 
      // Handle reconnection
   socket?.on('disconnect', () => {
-    console.log('Client disconnected');
     userSocketMap.delete(userId);
     connectedUserIDs.delete(userId);
     io.emit('user disconnected', Array.from(connectedUserIDs));
