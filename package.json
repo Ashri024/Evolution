@@ -4,8 +4,8 @@
   "description": "It is a fitness schedule scheduling app.",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon server.js",
-    "start": "node server.js"
+    "dev": "nodemon app.js",
+    "start": "node app.js"
   },
   "repository": {
     "type": "git",
@@ -21,6 +21,7 @@
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
+    "depd": "^2.0.0",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
