@@ -3,24 +3,43 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
     const registerUser = async (req, res) => {
-        const { email, password, fullName, role,gender,age,trainerAssigned } = req.body;
+        const { email, password, fullName, role,trainerAssigned} = req.body;
       
         try {
           const existingUser = await User.findOne({ email });
           if (existingUser) {
             return res.status(400).json({ message: 'User already exists' });
           }
-      
-          const newUser = new User({
-            email,
-            password,
-            fullName,
-            role,
-            gender,
-            age,
-            trainerAssigned
-          });
-      
+          let newUser="";
+          if(role ==="admin"){
+            if(trainerAssigned){
+              return res.status(400).json({ message: 'Admin cannot have a trainer assigned' });
+            }
+            newUser = new User({
+              email,
+              password,
+              fullName,
+              role,
+            })
+          }else {
+            if(!trainerAssigned){
+              return res.status(400).json({ message: 'Trainer should be assigned to a user' });
+            }
+            const ifTrainerExist = await User.findOne({ _id: trainerAssigned });
+
+            if (!ifTrainerExist) {
+              return res.status(400).json({ message: 'Trainer does not exist' });
+            }
+            newUser = new User({
+              email,
+              password,
+              fullName,
+              role,
+              trainerAssigned
+            })
+          }
+          
+
           await newUser.save();
       
           const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET);

@@ -23,6 +23,9 @@ const scheduleSchema = new mongoose.Schema({
   scheduleDescription: {
     type: String
   },
+  scheduleImg:{
+    type: String
+  },
   status: {
     type: String,
     default: 'pending',

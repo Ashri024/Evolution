@@ -4,6 +4,10 @@ const User = require('../models/User');
         const { date, startTime,endTime, scheduleLink, scheduleSubject,scheduleDescription,userId,trainerId} = req.body;
       
         try {
+          if(!req.user){
+            return res.status(400).json({ message: 'Token is invalid or expired' });
+          }
+          console.log("req.user: ",req.user);
           if (!userId || !trainerId) {
             return res.status(404).json({ message: 'Please provide userID and trainerID' });
           }
@@ -19,17 +23,40 @@ const User = require('../models/User');
           }
 
           let newSchedule;
-          if(user.role === 'admin'){
-          newSchedule = new ScheduleSchema({
-            date,
-            startTime,
-            endTime,
-            scheduleLink,
-            scheduleSubject,
-            scheduleDescription,
-            userId,
-            trainerId
-          });
+          let scheduleImgTemp;
+          let placeholderImg="https://res.cloudinary.com/djnhadxeb/image/upload/v1722353260/fitness-evolution/vo92g0wtbc025dljmc3q.jpg"
+
+          if(req.user.role === 'user'){
+            let trainerId = req.user.trainerAssigned;
+            const trainer = await User.findById(trainerId);
+            if(!trainer){
+              return res.status(404).json({ message: 'Trainer not found' });
+            }else{
+              scheduleImgTemp = trainer.profileImage;
+            }
+          }
+          if(req.user.role === 'admin'){
+            scheduleImgTemp = req.user.profileImage;
+          }
+          let ifDateCorrect= new Date(date) >= new Date();
+          let ifStartTimeCorrect = new Date(startTime) >= new Date();
+          let ifEndTimeCorrect = new Date(endTime) > new Date(startTime);
+          if(!ifStartTimeCorrect || !ifEndTimeCorrect ||!ifDateCorrect){
+            return res.status(400).json({ message: 'Start time should be greater than current time and end time should be greater than start time' });
+          }
+
+          if(req.user.role === 'admin'){
+            newSchedule = new ScheduleSchema({
+              date,
+              startTime,
+              endTime,
+              scheduleLink,
+              scheduleSubject,
+              scheduleDescription,
+              userId,
+              trainerId,
+              scheduleImg:scheduleImgTemp?scheduleImgTemp:placeholderImg,
+            });
         }else{
           newSchedule = new ScheduleSchema({
             date,
@@ -39,13 +66,14 @@ const User = require('../models/User');
             scheduleDescription,
             userId,
             trainerId,
+            scheduleImg:scheduleImgTemp?scheduleImgTemp:placeholderImg,
             status: 'waitingToApproved'
           });
         }
           await newSchedule.save();
           res.status(201).json(newSchedule);
         } catch (error) {
-          res.status(500).json({ message: 'Server error', error });
+          res.status(500).json({ message: 'Server error', error: error.message });
         }
     }
 
@@ -87,9 +115,9 @@ const getUpcomingSchedules = async (req, res) => {
     let schedules;
 
     if(req.user.role === 'admin'){
-     schedules = await ScheduleSchema.find({ trainerId: req.user._id, status: 'pending' });
+     schedules = await ScheduleSchema.find({ trainerId: req.user._id, status: 'pending' }).populate('userId','fullName');
     }else{
-      schedules = await ScheduleSchema.find({ userId: req.user._id, status: 'pending' });
+      schedules = await ScheduleSchema.find({ userId: req.user._id, status: 'pending' }).populate('trainerId','fullName');
     }
 
     let upcomingSchedules = schedules.filter(schedule => {
@@ -98,7 +126,7 @@ const getUpcomingSchedules = async (req, res) => {
 
     res.status(200).json(upcomingSchedules);
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 }
 
@@ -107,9 +135,9 @@ const getCompletedSchedules = async (req, res) => {
     let schedules;
 
     if(req.user.role === 'admin'){
-      schedules = await ScheduleSchema.find({ trainerId: req.user._id, status: 'completed' });
+      schedules = await ScheduleSchema.find({ trainerId: req.user._id, status: 'completed' }).populate('userId','fullName');
     }else{
-      schedules = await ScheduleSchema.find({ userId: req.user._id, status: 'completed' });
+      schedules = await ScheduleSchema.find({ userId: req.user._id, status: 'completed' }).populate('trainerId','fullName');
     }
 
     res.status(200).json(schedules);
@@ -123,9 +151,9 @@ const getPendingSchedules = async (req, res) => {
     let schedules;
 
     if(req.user.role === 'admin'){
-      schedules = await ScheduleSchema.find({ trainerId: req.user._id, status: 'pending' });
+      schedules = await ScheduleSchema.find({ trainerId: req.user._id, status: 'pending' }).populate('userId','fullName');
     }else{
-      schedules = await ScheduleSchema.find({ userId: req.user._id, status: 'pending' });
+      schedules = await ScheduleSchema.find({ userId: req.user._id, status: 'pending' }).populate('trainerId','fullName');
     }
     let pendingSchedules = schedules.filter(schedule => {
       return new Date(schedule.endTime) <= new Date();
@@ -141,7 +169,7 @@ const getRequestedSchedules = async (req, res) => {
     let schedules;
 
     if(req.user.role === 'admin'){
-      schedules = await ScheduleSchema.find({ trainerId: req.user._id, status: 'waitingToApproved' });
+      schedules = await ScheduleSchema.find({ trainerId: req.user._id, status: 'waitingToApproved' }).populate('userId','fullName');
     }
     else{
       res.status(401).json({ message: 'You are not authorized to this route' });
