@@ -1,8 +1,6 @@
 const express = require('express');
 const { registerUser, loginUser, getUserDetails, updateUser, deleteUser,getAllUsers,deleteAllUsers, getAllUsersUnderTrainer, changePassword, verifyEmail } = require('../controllers/User');
 const authMiddleware = require('../middlewares/authMiddleware');
-const User = require('../models/User');
-const { verify } = require('jsonwebtoken');
 const router = express.Router();
 // Append /v0/api/user before all routes
 

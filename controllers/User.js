@@ -23,7 +23,7 @@ const jwt = require('jsonwebtoken');
       
           await newUser.save();
       
-          const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: '3d' });
+          const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET);
       
           res.status(201).json({ token, user: newUser });
         } catch (error) {
@@ -48,7 +48,7 @@ const jwt = require('jsonwebtoken');
           return res.status(400).json({ message: 'Invalid email or password' });
         }
     
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '3d' });
+        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
     
         res.status(200).json({ token, user });
       } catch (error) {
@@ -65,16 +65,15 @@ const jwt = require('jsonwebtoken');
       }
     }
 
-    
     const updateUser = async (req, res) => {
-        const { fullName, gender, profileImage, birthDate, password, email } = req.body;
+        const { fullName, gender, profileImage, age, password, email } = req.body;
         let updateFields = {};
     
         // Add fields to updateFields object only if they are provided and not empty
         if (fullName) updateFields.fullName = fullName;
         if (gender) updateFields.gender = gender;
         if (profileImage) updateFields.profileImage = profileImage;
-        if (birthDate) updateFields.birthDate = birthDate;
+        if (age) updateFields.age = age;
         if (password) updateFields.password = password;
         if (email) updateFields.email = email;
     

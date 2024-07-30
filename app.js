@@ -11,6 +11,7 @@ const UserRoutes = require('./routes/User');
 const port = process.env.PORT || 3000;
 const Message = require('./models/Message');
 const mongoose = require('mongoose');
+const UploadRoute = require('./routes/Upload');
 
 // Load db and env
 require('dotenv').config();
@@ -23,6 +24,7 @@ app.use(morgan('dev'));
 
 // This is my comment
 // Api routes
+app.use('/v0/api/images',UploadRoute)
 app.use('/v0/api/schedule', ScheduleRoutes);
 app.use('/v0/api/user', UserRoutes);
 app.get('/', (req, res) => {
