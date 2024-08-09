@@ -204,7 +204,7 @@ const changeStatus = async (req, res) => {
 
 const rescheduleSchedules = async (req, res) => {
   const { scheduleId } = req.params;
-  const { date, startTime, endTime,scheduleLink,scheduleSubject,scheduleDescription } = req.body;
+  const { date, startTime, endTime,scheduleLink,scheduleSubject,scheduleDescription,status } = req.body;
 
   try {
     if(req.user.role !== 'admin'){
@@ -218,6 +218,11 @@ const rescheduleSchedules = async (req, res) => {
     if(scheduleLink) obj.scheduleLink = scheduleLink;
     if(scheduleSubject) obj.scheduleSubject = scheduleSubject;
     if(scheduleDescription) obj.scheduleDescription = scheduleDescription;
+    if(status){
+      obj.status = status;
+    }else {
+      obg.status = 'pending'
+    }
 
     const schedule = await ScheduleSchema.findByIdAndUpdate(scheduleId, obj, {
       new: true,
