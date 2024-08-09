@@ -1,5 +1,6 @@
 const ScheduleSchema = require('../models/Schedule');
 const User = require('../models/User');
+const dayjs = require('dayjs');
     const createSchedule=async (req, res) => {
         const { date, startTime,endTime, scheduleLink, scheduleSubject,scheduleDescription,userId,trainerId} = req.body;
       
@@ -38,7 +39,9 @@ const User = require('../models/User');
           if(req.user.role === 'admin'){
             scheduleImgTemp = req.user.profileImage;
           }
-          let ifDateCorrect= new Date(date) >= new Date();
+          let inputDate = dayjs(date);
+          let currentDate = dayjs();
+          let ifDateCorrect = inputDate.isSame(currentDate, 'day') || inputDate.isAfter(currentDate, 'day');
           let ifStartTimeCorrect = new Date(startTime) >= new Date();
           let ifEndTimeCorrect = new Date(endTime) > new Date(startTime);
           if(!ifStartTimeCorrect || !ifEndTimeCorrect ||!ifDateCorrect){
