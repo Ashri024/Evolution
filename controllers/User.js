@@ -77,7 +77,7 @@ const jwt = require('jsonwebtoken');
 
     const getUserDetails = async (req, res) => {
       try {
-        const user = await User.findById(req.user._id).select('-password');
+        const user = await User.findById(req.user._id).select('-password').populate('trainerAssigned', 'fullName');
         res.status(200).json(user);
       } catch (error) {
         res.status(500).json({ message: 'Server error', error });
