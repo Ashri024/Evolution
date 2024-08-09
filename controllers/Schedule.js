@@ -221,7 +221,7 @@ const rescheduleSchedules = async (req, res) => {
     if(status){
       obj.status = status;
     }else {
-      obg.status = 'pending'
+      obj.status = 'pending'
     }
 
     const schedule = await ScheduleSchema.findByIdAndUpdate(scheduleId, obj, {
