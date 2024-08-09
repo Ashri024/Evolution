@@ -124,7 +124,7 @@ const getUpcomingSchedules = async (req, res) => {
     }
 
     let upcomingSchedules = schedules.filter(schedule => {
-      return new Date(schedule.date) >= new Date();
+      return new Date(schedule.startTime) >= new Date();
     });
 
     res.status(200).json(upcomingSchedules);
