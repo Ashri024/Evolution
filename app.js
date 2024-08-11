@@ -53,8 +53,7 @@ function getSocketIdByUserId(userId) {
     return userSocketMap.get(userId);
 }
 io.on('connection', (socket) => {
-    // Loading messages and marking the sent messages as delivered as the user is online now
-    // io.emit("hello", "Hello from server");
+   
     async function getReceivedMessages(userId) {
         const receivedMessages = await Message.find({ receiverId: userId, status: 'sent' });
         return receivedMessages;
@@ -93,7 +92,7 @@ io.on('connection', (socket) => {
         }
         return null;
     }
-    let lastMessages=[]
+    let lastMessages=[];
     socket.on("allUsers", async (users) => {
         for (let i = 0; i < users.length; i++) {
             const lastMessage= await extractLastMessage(userId, users[i]);

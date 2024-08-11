@@ -75,14 +75,19 @@ const jwt = require('jsonwebtoken');
       }
     }
 
-    const getUserDetails = async (req, res) => {
+     const getUserDetails = async (req, res) => {
       try {
-        const user = await User.findById(req.user._id).select('-password').populate('trainerAssigned', 'fullName');
+        const user = await User.findById(req.user._id)
+          .populate({
+            path: 'trainerAssigned',
+            select: '-password'
+          })
+          .select('-password');
         res.status(200).json(user);
       } catch (error) {
         res.status(500).json({ message: 'Server error', error });
       }
-    }
+    };
 
     const updateUser = async (req, res) => {
         const { fullName, gender, profileImage, age, password, email } = req.body;
