@@ -8,7 +8,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const ScheduleRoutes = require('./routes/Schedule');
 const UserRoutes = require('./routes/User');
-const port = process.env.PORT || 8080;
+const port = process.env.PORT || 3000;
 const Message = require('./models/Message');
 const mongoose = require('mongoose');
 const UploadRoute = require('./routes/Upload');
@@ -32,7 +32,6 @@ app.get('/', (req, res) => {
 });
 
 // Create HTTP server
-console.log("Client url : ", process.env.CLIENT_URL);
 const server = http.createServer(app);
 
 // Initialize Socket.IO
@@ -53,7 +52,6 @@ function getSocketIdByUserId(userId) {
     return userSocketMap.get(userId);
 }
 io.on('connection', (socket) => {
-   console.log('a user connected');
     async function getReceivedMessages(userId) {
         const receivedMessages = await Message.find({ receiverId: userId, status: 'sent' });
         return receivedMessages;

@@ -1,66 +1,48 @@
 const ScheduleSchema = require('../models/Schedule');
 const User = require('../models/User');
 const dayjs = require('dayjs');
-    const createSchedule=async (req, res) => {
-        const { date, startTime,endTime, scheduleLink, scheduleSubject,scheduleDescription,userId,trainerId} = req.body;
-      
-        try {
-          if(!req.user){
-            return res.status(400).json({ message: 'Token is invalid or expired' });
-          }
-          console.log("req.user: ",req.user);
-          if (!userId || !trainerId) {
-            return res.status(404).json({ message: 'Please provide userID and trainerID' });
-          }
-          //checking if the userId and trainerId are valid
-
-          const user = await User.findById(userId);
-          const trainer = await User.findById(trainerId);
-          if(!user){
-            return res.status(404).json({ message: 'User not found' });
-          }
-          if(!trainer){
-            return res.status(404).json({ message: 'Trainer not found' });
-          }
-
-          let newSchedule;
-          let scheduleImgTemp;
-          let placeholderImg="https://res.cloudinary.com/djnhadxeb/image/upload/v1722353260/fitness-evolution/vo92g0wtbc025dljmc3q.jpg"
-
-          if(req.user.role === 'user'){
-            let trainerId = req.user.trainerAssigned;
-            const trainer = await User.findById(trainerId);
-            if(!trainer){
-              return res.status(404).json({ message: 'Trainer not found' });
-            }else{
-              scheduleImgTemp = trainer.profileImage;
-            }
-          }
-          if(req.user.role === 'admin'){
-            scheduleImgTemp = req.user.profileImage;
-          }
-          let inputDate = dayjs(date);
-          let currentDate = dayjs();
-          let ifDateCorrect = inputDate.isSame(currentDate, 'day') || inputDate.isAfter(currentDate, 'day');
-          let ifStartTimeCorrect = new Date(startTime) >= new Date();
-          let ifEndTimeCorrect = new Date(endTime) > new Date(startTime);
-          if(!ifStartTimeCorrect || !ifEndTimeCorrect ||!ifDateCorrect){
-            return res.status(400).json({ message: 'Start time should be greater than current time and end time should be greater than start time' });
-          }
-
-          if(req.user.role === 'admin'){
-            newSchedule = new ScheduleSchema({
-              date,
-              startTime,
-              endTime,
-              scheduleLink,
-              scheduleSubject,
-              scheduleDescription,
-              userId,
-              trainerId,
-              scheduleImg:scheduleImgTemp?scheduleImgTemp:placeholderImg,
-            });
-        }else{
+    const createSchedule = async (req, res) => {
+      const { date, startTime, endTime, scheduleLink, scheduleSubject, scheduleDescription, userId, trainerId } = req.body;
+    
+      try {
+        if (!req.user) {
+          return res.status(400).json({ message: 'Token is invalid or expired' });
+        }
+        if (!userId || !trainerId) {
+          return res.status(404).json({ message: 'Please provide userID and trainerID' });
+        }
+        // Checking if the userId and trainerId are valid
+        const user = await User.findById(userId);
+        const trainer = await User.findById(trainerId);
+        if (!user) {
+          return res.status(404).json({ message: 'User not found' });
+        }
+        if (!trainer) {
+          return res.status(404).json({ message: 'Trainer not found' });
+        }
+    
+        let newSchedule;
+        let inputDate = dayjs(date);
+        let currentDate = dayjs();
+        let ifDateCorrect = inputDate.isSame(currentDate, 'day') || inputDate.isAfter(currentDate, 'day');
+        let ifStartTimeCorrect = new Date(startTime) >= new Date();
+        let ifEndTimeCorrect = new Date(endTime) > new Date(startTime);
+        if (!ifStartTimeCorrect || !ifEndTimeCorrect || !ifDateCorrect) {
+          return res.status(400).json({ message: 'Start time should be greater than current time and end time should be greater than start time' });
+        }
+    
+        if (req.user.role === 'admin') {
+          newSchedule = new ScheduleSchema({
+            date,
+            startTime,
+            endTime,
+            scheduleLink,
+            scheduleSubject,
+            scheduleDescription,
+            userId,
+            trainerId,
+          });
+        } else {
           newSchedule = new ScheduleSchema({
             date,
             startTime,
@@ -69,46 +51,59 @@ const dayjs = require('dayjs');
             scheduleDescription,
             userId,
             trainerId,
-            scheduleImg:scheduleImgTemp?scheduleImgTemp:placeholderImg,
             status: 'waitingToApproved'
           });
         }
-          await newSchedule.save();
-          res.status(201).json(newSchedule);
-        } catch (error) {
-          res.status(500).json({ message: 'Server error', error: error.message });
+    
+        const savedSchedule = await newSchedule.save();
+    
+        if (req.user.role === 'admin') {
+          await savedSchedule.populate([
+            {path: 'userId',select: 'fullName gender age'},
+            {path: 'trainerId',select: 'profileImage'}
+          ])
+        } else {
+          await savedSchedule.populate('trainerId', 'fullName profileImage')
         }
-    }
-
-  const getSchedules= async (req, res) => {
-      try {
-        let schedules;
-        if(req.user.role === 'admin'){
-          schedules = await ScheduleSchema.find({ trainerId: req.user._id});
-          return res.status(200).json(schedules);
-        }else{
-          schedules = await ScheduleSchema.find({ userId: req.user._id});
-      }
-        res.status(200).json(schedules);
+    
+        res.status(201).json(savedSchedule);
       } catch (error) {
-        res.status(500).json({ message: 'Server error', error });
+        res.status(500).json({ message: 'Server error', error: error.message });
       }
+    };
+const getSchedules = async (req, res) => {
+    try {
+        let schedules;
+        if (req.user.role === 'admin') {
+            schedules = await ScheduleSchema.find({ trainerId: req.user._id }).populate('userId', 'fullName gender age').populate('trainerId', 'profileImage');
+            return res.status(200).json(schedules);
+        } else {
+            schedules = await ScheduleSchema.find({ userId: req.user._id }).populate('trainerId', 'fullName profileImage');
+        }
+        res.status(200).json(schedules);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error });
     }
-
+};
 const getSingleSchedule = async (req, res) => {
   const { scheduleId } = req.params;
-  try{
+  try {
     const schedule = await ScheduleSchema.findById(scheduleId);
     if (!schedule) {
       return res.status(404).json({ message: 'Schedule not found' });
     }
-    if(req.user.role === 'admin'){
-      await schedule.populate('userId','fullName gender age')
-    }else{
-      await schedule.populate('trainerId','fullName');
+    if (req.user.role === 'admin') {
+      await schedule.populate([
+        { path: 'userId', select: 'fullName gender age' },
+        { path: 'trainerId', select: 'profileImage' }
+      ]);
+    } else {
+      await schedule.populate([
+        { path: 'trainerId', select: 'fullName profileImage' }
+      ]);
     }
     res.status(200).json(schedule);
-  }catch(error){
+  } catch (error) {
     res.status(500).json({ message: 'Server error', error });
   }
 }
@@ -117,16 +112,20 @@ const getUpcomingSchedules = async (req, res) => {
   try {
     let schedules;
 
-    if(req.user.role === 'admin'){
-     schedules = await ScheduleSchema.find({ trainerId: req.user._id, status: 'pending' }).populate('userId','fullName');
-    }else{
-      schedules = await ScheduleSchema.find({ userId: req.user._id, status: 'pending' }).populate('trainerId','fullName');
+    if (req.user.role === 'admin') {
+      schedules = await ScheduleSchema.find({ trainerId: req.user._id, status: 'pending' }).populate([
+        { path: 'userId', select: 'fullName gender age' },
+        { path: 'trainerId', select: 'profileImage' }
+      ]);
+    } else {
+      schedules = await ScheduleSchema.find({ userId: req.user._id, status: 'pending' }).populate([
+        { path: 'trainerId', select: 'fullName profileImage' }
+      ]);
     }
 
     let upcomingSchedules = schedules.filter(schedule => {
       return new Date(schedule.startTime) >= new Date();
     });
-
     res.status(200).json(upcomingSchedules);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -137,10 +136,15 @@ const getCompletedSchedules = async (req, res) => {
   try {
     let schedules;
 
-    if(req.user.role === 'admin'){
-      schedules = await ScheduleSchema.find({ trainerId: req.user._id, status: 'completed' }).populate('userId','fullName');
-    }else{
-      schedules = await ScheduleSchema.find({ userId: req.user._id, status: 'completed' }).populate('trainerId','fullName');
+    if (req.user.role === 'admin') {
+      schedules = await ScheduleSchema.find({ trainerId: req.user._id, status: 'completed' }).populate([
+        { path: 'userId', select: 'fullName gender age' },
+        { path: 'trainerId', select: 'profileImage' }
+      ]);
+    } else {
+      schedules = await ScheduleSchema.find({ userId: req.user._id, status: 'completed' }).populate([
+        { path: 'trainerId', select: 'fullName profileImage' }
+      ]);
     }
 
     res.status(200).json(schedules);
@@ -153,10 +157,15 @@ const getPendingSchedules = async (req, res) => {
   try {
     let schedules;
 
-    if(req.user.role === 'admin'){
-      schedules = await ScheduleSchema.find({ trainerId: req.user._id, status: 'pending' }).populate('userId','fullName');
-    }else{
-      schedules = await ScheduleSchema.find({ userId: req.user._id, status: 'pending' }).populate('trainerId','fullName');
+    if (req.user.role === 'admin') {
+      schedules = await ScheduleSchema.find({ trainerId: req.user._id, status: 'pending' }).populate([
+        { path: 'userId', select: 'fullName gender age' },
+        { path: 'trainerId', select: 'profileImage' }
+      ]);
+    } else {
+      schedules = await ScheduleSchema.find({ userId: req.user._id, status: 'pending' }).populate([
+        { path: 'trainerId', select: 'fullName profileImage' }
+      ]);
     }
     let pendingSchedules = schedules.filter(schedule => {
       return new Date(schedule.endTime) <= new Date();
@@ -171,10 +180,12 @@ const getRequestedSchedules = async (req, res) => {
   try {
     let schedules;
 
-    if(req.user.role === 'admin'){
-      schedules = await ScheduleSchema.find({ trainerId: req.user._id, status: 'waitingToApproved' }).populate('userId','fullName');
-    }
-    else{
+    if (req.user.role === 'admin') {
+      schedules = await ScheduleSchema.find({ trainerId: req.user._id, status: 'waitingToApproved' }).populate([
+        { path: 'userId', select: 'fullName gender age' },
+        { path: 'trainerId', select: 'profileImage' }
+      ]);
+    } else {
       res.status(401).json({ message: 'You are not authorized to this route' });
     }
 
@@ -189,7 +200,7 @@ const changeStatus = async (req, res) => {
   const { status } = req.body;
 
   try {
-    if(req.user.role !== 'admin'){
+    if (req.user.role !== 'admin') {
       return res.status(401).json({ message: 'You are not authorized to this route' });
     }
     const schedule = await ScheduleSchema.findById(scheduleId);
@@ -199,48 +210,55 @@ const changeStatus = async (req, res) => {
 
     schedule.status = status;
     await schedule.save();
+    await schedule.populate([
+      { path: 'userId', select: 'fullName gender age' },
+      { path: 'trainerId', select: 'profileImage' }
+    ]);
+
     res.status(200).json(schedule);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error });
   }
 }
-
 const rescheduleSchedules = async (req, res) => {
   const { scheduleId } = req.params;
-  const { date, startTime, endTime,scheduleLink,scheduleSubject,scheduleDescription,status } = req.body;
+  const { date, startTime, endTime, scheduleLink, scheduleSubject, scheduleDescription, status } = req.body;
 
   try {
-    if(req.user.role !== 'admin'){
+    if (req.user.role !== 'admin') {
       return res.status(401).json({ message: 'You are not authorized to this route' });
     }
 
-    let obj={};
-    if(date) obj.date = date;
-    if(startTime) obj.startTime = startTime;
-    if(endTime) obj.endTime = endTime;
-    if(scheduleLink) obj.scheduleLink = scheduleLink;
-    if(scheduleSubject) obj.scheduleSubject = scheduleSubject;
-    if(scheduleDescription) obj.scheduleDescription = scheduleDescription;
-    if(status){
+    let obj = {};
+    if (date) obj.date = date;
+    if (startTime) obj.startTime = startTime;
+    if (endTime) obj.endTime = endTime;
+    if (scheduleLink) obj.scheduleLink = scheduleLink;
+    if (scheduleSubject) obj.scheduleSubject = scheduleSubject;
+    if (scheduleDescription) obj.scheduleDescription = scheduleDescription;
+    if (status) {
       obj.status = status;
-    }else {
-      obj.status = 'pending'
+    } else {
+      obj.status = 'pending';
     }
 
     const schedule = await ScheduleSchema.findByIdAndUpdate(scheduleId, obj, {
       new: true,
       runValidators: true
-    });
+    }).populate([
+      { path: 'userId', select: 'fullName gender age' },
+      { path: 'trainerId', select: 'profileImage' }
+    ]);
+
     if (!schedule) {
       return res.status(404).json({ message: 'Schedule not found' });
     }
 
     res.status(200).json(schedule);
-  }
-  catch (error) {
+  } catch (error) {
     res.status(500).json({ message: 'Server error', error });
   }
-}  
+}
 
 // FOR DEV PURPOSE ONLY
 const getAllSchedules = async (req, res) => {

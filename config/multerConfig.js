@@ -5,8 +5,8 @@ const cloudinary = require('./cloudinaryConfig');
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: {
-        folder: 'fitness-evolution', // Set the folder name in Cloudinary
-        allowed_formats: ['jpg', 'png', 'jpeg', 'webp', 'svg'], // Specify the allowed formats
+        folder: 'fitness-evolution', 
+        allowed_formats: ['jpg', 'png', 'jpeg', 'webp', 'svg'], 
     },
 });
 
