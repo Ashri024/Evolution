@@ -2,8 +2,8 @@ const ScheduleSchema = require('../models/Schedule');
 const User = require('../models/User');
 const dayjs = require('dayjs');
     const createSchedule = async (req, res) => {
-      const { date, startTime, endTime, scheduleLink, scheduleSubject, scheduleDescription, userId, trainerId } = req.body;
-    
+      const { date, startTime, endTime, scheduleLink, scheduleSubject, scheduleDescription, userId, trainerId,affectedArea } = req.body;
+    console.log(req.body)
       try {
         if (!req.user) {
           return res.status(400).json({ message: 'Token is invalid or expired' });
@@ -41,6 +41,7 @@ const dayjs = require('dayjs');
             scheduleDescription,
             userId,
             trainerId,
+            affectedArea,
           });
         } else {
           newSchedule = new ScheduleSchema({
@@ -51,6 +52,7 @@ const dayjs = require('dayjs');
             scheduleDescription,
             userId,
             trainerId,
+            affectedArea,
             status: 'waitingToApproved'
           });
         }
@@ -222,7 +224,7 @@ const changeStatus = async (req, res) => {
 }
 const rescheduleSchedules = async (req, res) => {
   const { scheduleId } = req.params;
-  const { date, startTime, endTime, scheduleLink, scheduleSubject, scheduleDescription, status } = req.body;
+  const { date, startTime, endTime, scheduleLink, scheduleSubject, scheduleDescription, status,affectedArea } = req.body;
 
   try {
     if (req.user.role !== 'admin') {
@@ -235,6 +237,7 @@ const rescheduleSchedules = async (req, res) => {
     if (endTime) obj.endTime = endTime;
     if (scheduleLink) obj.scheduleLink = scheduleLink;
     if (scheduleSubject) obj.scheduleSubject = scheduleSubject;
+    if (affectedArea) obj.affectedArea = affectedArea;
     if (scheduleDescription) obj.scheduleDescription = scheduleDescription;
     if (status) {
       obj.status = status;
@@ -259,6 +262,81 @@ const rescheduleSchedules = async (req, res) => {
     res.status(500).json({ message: 'Server error', error });
   }
 }
+const upcomingTrainer = async (req, res) => {
+  const trainerId = req.user._id;
+  const {userId} = req.query;
+
+  try {
+    // check if the user is a trainer
+    console.log(req.user)
+    const trainer = await User.findById(trainerId);
+    if(!trainer){
+      return res.status(404).json({ message: 'Trainer not found' });
+    }
+    if(req.user.role === 'user'){
+      return res.status(401).json({ message: 'You are not authorized to this route' });
+    }
+
+    const schedules = await ScheduleSchema.find({ trainerId, userId, status: 'pending' }).populate([
+      { path: 'userId', select: 'fullName gender age' },
+      { path: 'trainerId', select: 'profileImage' }
+    ]) 
+
+    res.status(200).json(schedules);
+
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+}
+
+const requestedTrainer = async (req, res) => {
+  const trainerId = req.user._id;
+  const {userId} = req.query;
+
+  try {
+    const trainer = await User.findById(trainerId);
+    if(!trainer){
+      return res.status(404).json({ message: 'Trainer not found' });
+    }
+    if(req.user.role === 'user'){
+      return res.status(401).json({ message: 'You are not authorized to this route' });
+    }
+
+    const schedules = await ScheduleSchema.find({ trainerId, userId, status: 'waitingToApproved' }).populate([
+      { path: 'userId', select: 'fullName gender age' },
+      { path: 'trainerId', select: 'profileImage' }
+    ]) 
+
+    res.status(200).json(schedules);
+
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+}
+
+const completedTrainer = async (req, res) => {
+  const trainerId = req.user._id;
+  const {userId} = req.query;
+
+  try {
+    const trainer = await User.findById(trainerId);
+    if(!trainer){
+      return res.status(404).json({ message: 'Trainer not found' });
+    }
+    if(req.user.role === 'user'){
+      return res.status(401).json({ message: 'You are not authorized to this route' });
+    }
+
+    const schedules = await ScheduleSchema.find({ trainerId, userId, status: 'completed' }).populate([
+      { path: 'userId', select: 'fullName gender age' },
+      { path: 'trainerId', select: 'profileImage' }
+    ]) 
+
+    res.status(200).json(schedules);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+}
 
 // FOR DEV PURPOSE ONLY
 const getAllSchedules = async (req, res) => {
@@ -279,4 +357,4 @@ const deleteAllSchedules = async (req, res) => {
   }
 }
 
-module.exports= {createSchedule, getSchedules,getAllSchedules,deleteAllSchedules,getUpcomingSchedules,getCompletedSchedules,getPendingSchedules,getRequestedSchedules,changeStatus,rescheduleSchedules,getSingleSchedule}
+module.exports= {createSchedule, getSchedules,getAllSchedules,deleteAllSchedules,getUpcomingSchedules,getCompletedSchedules,getPendingSchedules,getRequestedSchedules,changeStatus,rescheduleSchedules,getSingleSchedule,upcomingTrainer,requestedTrainer,completedTrainer};

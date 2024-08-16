@@ -1,5 +1,5 @@
 const express = require('express');
-const { registerUser, loginUser, getUserDetails, updateUser, deleteUser,getAllUsers,deleteAllUsers, getAllUsersUnderTrainer, changePassword, verifyEmail } = require('../controllers/User');
+const { registerUser, loginUser, getUserDetails, updateUser, deleteUser,getAllUsers,deleteAllUsers, getAllUsersUnderTrainer, changePassword, verifyEmail, deleteMyAccount, changeRole } = require('../controllers/User');
 const authMiddleware = require('../middlewares/authMiddleware');
 const router = express.Router();
 // Append /v0/api/user before all routes
@@ -17,10 +17,15 @@ router.get('/me', authMiddleware, getUserDetails);
 router.put('/me', authMiddleware, updateUser);
 
 // Route to delete user
-router.delete('/me', authMiddleware, deleteUser);
+router.delete('/me', authMiddleware, deleteMyAccount);
 
+// Route to delete user by a admin
+router.delete('/deleteUser/:userId', authMiddleware, deleteUser);
 // Route to get all users under a trainer
 router.get('/allUsersUnderTrainer', authMiddleware, getAllUsersUnderTrainer);
+
+// Route to change role by admin only
+router.put('/changeRole/:userId', authMiddleware, changeRole);
 
 // verifying email for changing password
 router.get("/verifyEmail", verifyEmail);

@@ -26,6 +26,9 @@ const scheduleSchema = new mongoose.Schema({
   scheduleImg:{
     type: String
   },
+  affectedArea:{
+    type: String
+  },
   status: {
     type: String,
     default: 'pending',

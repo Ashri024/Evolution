@@ -1,6 +1,8 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const Schedule = require('../models/Schedule');
+const Message = require('../models/Message');
 
     const registerUser = async (req, res) => {
         const { email, password, fullName, role,trainerAssigned} = req.body;
@@ -116,11 +118,29 @@ const jwt = require('jsonwebtoken');
         }
     }
 
-    const deleteUser = async (req, res) => {
+    const deleteMyAccount = async (req, res) => {
       try {
-        await User.findByIdAndDelete(req.user._id);
+        let userIdToDelete = req.user._id;
+        await User.findByIdAndDelete(userIdToDelete);
+        await Schedule.deleteMany({ userId: userIdToDelete});
+        await Message.deleteMany({ $or: [{ senderId: userIdToDelete }, { receiverId: userIdToDelete }] })
         res.status(200).json({ message: 'User deleted successfully' });
       } catch (error) {
+        res.status(500).json({ message: 'Server error', error });
+      }
+    }
+    const deleteUser = async (req, res) => {
+      try {
+        let userIdToDelete = req.params.userId;
+        if(req.user.role !== 'admin'){
+          return res.status(401).json({ message: 'Acces is denied' });
+        }
+        await User.findByIdAndDelete(userIdToDelete);
+        await Schedule.deleteMany({ userId: userIdToDelete});
+        await Message.deleteMany({ $or: [{ senderId: userIdToDelete }, { receiverId: userIdToDelete }] })
+        res.status(200).json({ message: 'User deleted successfully' });
+      }
+      catch (error) {
         res.status(500).json({ message: 'Server error', error });
       }
     }
@@ -143,7 +163,27 @@ const jwt = require('jsonwebtoken');
           return res.status(500).json({ message: error.message });
       }
   }
-
+const changeRole = async (req, res) => {
+  const { role } = req.body;
+  let updateFields = {};
+  if (role) updateFields.role = role;
+  try {
+    if(req.user.role !== 'admin'){
+      return res.status(401).json({ message: 'Access is denied' });
+    }
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.userId,
+      updateFields,
+      { new: true, runValidators: true }
+    ).select('-password');
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.status(200).json(updatedUser);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+}
   const changePassword =async (req, res) => {
     try {
         const user = await User.findOne({ email:
@@ -174,4 +214,4 @@ const jwt = require('jsonwebtoken');
       } catch (error) {
         res.status(500).json({ message: 'Server error', error });
     }}
-module.exports = { registerUser, loginUser, getUserDetails, updateUser, deleteUser,getAllUsers,deleteAllUsers,getAllUsersUnderTrainer, verifyEmail, changePassword };
+module.exports = { registerUser, loginUser, getUserDetails, updateUser, deleteMyAccount,getAllUsers,deleteAllUsers,getAllUsersUnderTrainer, verifyEmail, changePassword ,deleteUser,changeRole};
