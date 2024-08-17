@@ -40,7 +40,8 @@ const io = socketIo(server,{
         origin: process.env.CLIENT_URL,
         methods: ["GET", "POST"],
         credentials: true
-    }
+    },
+    
 });
 
 const userSocketMap = new Map();
@@ -78,11 +79,13 @@ io.on('connection', (socket) => {
     };
 
     const userId = getUserIdFromSocket(socket);
+    if(userId){
+        console.log('Client connected with userId:', userId);
     userSocketMap.set(userId, socket?.id);
     socket.on("markAllDelivered", async (userId) => {
         await markAllDelivered(userId);
     });
-
+}
     const extractLastMessage=async(userId1, userId2)=> {
         const messages = await fetchMessages(userId1, userId2);
         if (messages.length > 0) {
@@ -138,6 +141,7 @@ async function userInitialization(userId){
             receiverName: msg.receiverName,
             receiverId: msg.receiverId,
             status: msg.status,
+            timeStamp: msg.timeStamp || Date.now()
         });
         const finalMsg= await message.save();
     
@@ -146,7 +150,8 @@ async function userInitialization(userId){
         if (receiverSocketId) {
             socket.to(receiverSocketId).emit("chat message", finalMsg);
         }
-        socket.emit("chat message", finalMsg);
+        
+        socket.emit("msg_ID received", finalMsg);
     })
     // Update message status to 'delivered'
     socket?.on('message sent', async (messageId) => {
@@ -157,6 +162,7 @@ async function userInitialization(userId){
             const message = await Message.findById(messageId);
             if (message) {
                 let msg;
+                console.log(userSocketMap);
                 if(getSocketIdByUserId(message.receiverId)){
                     message.status = 'delivered';
                     msg= await message.save();
@@ -170,7 +176,7 @@ async function userInitialization(userId){
             }
                 const senderSocketId = getSocketIdByUserId(msg.senderId);
                 if (senderSocketId) {
-                    // socket.to(senderSocketId).emit('message status', msg);
+                    console.log("Status changes: ", msg);
                     socket.emit('message status', msg);
                 }
             }
@@ -199,17 +205,22 @@ async function userInitialization(userId){
         }
     });
 
-     // Handle reconnection
-  socket?.on('disconnect', () => {
+  socket?.on('disconnect', (reason) => {
+    console.log('Client disconnected:', socket.id, 'for reason:', reason);
+    console.log('Client disconnected: userId:', userId);
     userSocketMap.delete(userId);
     connectedUserIDs.delete(userId);
     io.emit('user disconnected', Array.from(connectedUserIDs));
   });
 
   // Handle reconnection attempts
-  socket?.on('reconnect_attempt', () => {
-    console.log('Client attempting to reconnect');
-    });
+  socket.on('reconnect_attempt', () => {
+    console.log('Client attempting to reconnect:', socket.id);
+  });
+
+  socket.on('reconnect', (attemptNumber) => {
+    console.log('Client reconnected:', socket.id, 'on attempt:', attemptNumber);
+  });
 });
 // Start the server
 server.listen(port, () => {
