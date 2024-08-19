@@ -35,15 +35,15 @@ app.get('/', (req, res) => {
 const server = http.createServer(app);
 
 // Initialize Socket.IO
-const io = socketIo(server,{
+const io = socketIo(server, {
     cors: {
         origin: process.env.CLIENT_URL,
         methods: ["GET", "POST"],
         credentials: true
     },
-    
+    pingTimeout: 80000, // 60 seconds
+    pingInterval: 30000 // 25 seconds
 });
-
 const userSocketMap = new Map();
 const connectedUserIDs = new Set();
 function getUserIdFromSocket(socket) {
@@ -53,6 +53,7 @@ function getSocketIdByUserId(userId) {
     return userSocketMap.get(userId);
 }
 io.on('connection', (socket) => {
+    console.log('Client connected:', socket.id);
     async function getReceivedMessages(userId) {
         const receivedMessages = await Message.find({ receiverId: userId, status: 'sent' });
         return receivedMessages;
@@ -80,7 +81,6 @@ io.on('connection', (socket) => {
 
     const userId = getUserIdFromSocket(socket);
     if(userId){
-        console.log('Client connected with userId:', userId);
     userSocketMap.set(userId, socket?.id);
     socket.on("markAllDelivered", async (userId) => {
         await markAllDelivered(userId);
@@ -162,7 +162,6 @@ async function userInitialization(userId){
             const message = await Message.findById(messageId);
             if (message) {
                 let msg;
-                console.log(userSocketMap);
                 if(getSocketIdByUserId(message.receiverId)){
                     message.status = 'delivered';
                     msg= await message.save();
@@ -176,7 +175,6 @@ async function userInitialization(userId){
             }
                 const senderSocketId = getSocketIdByUserId(msg.senderId);
                 if (senderSocketId) {
-                    console.log("Status changes: ", msg);
                     socket.emit('message status', msg);
                 }
             }
@@ -205,9 +203,9 @@ async function userInitialization(userId){
         }
     });
 
-  socket?.on('disconnect', (reason) => {
+  socket?.on('disconnect', (reason,details) => {
     console.log('Client disconnected:', socket.id, 'for reason:', reason);
-    console.log('Client disconnected: userId:', userId);
+    console.log('details:', details);
     userSocketMap.delete(userId);
     connectedUserIDs.delete(userId);
     io.emit('user disconnected', Array.from(connectedUserIDs));

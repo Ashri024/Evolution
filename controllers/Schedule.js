@@ -3,7 +3,6 @@ const User = require('../models/User');
 const dayjs = require('dayjs');
     const createSchedule = async (req, res) => {
       const { date, startTime, endTime, scheduleLink, scheduleSubject, scheduleDescription, userId, trainerId,affectedArea } = req.body;
-    console.log(req.body)
       try {
         if (!req.user) {
           return res.status(400).json({ message: 'Token is invalid or expired' });
@@ -268,7 +267,6 @@ const upcomingTrainer = async (req, res) => {
 
   try {
     // check if the user is a trainer
-    console.log(req.user)
     const trainer = await User.findById(trainerId);
     if(!trainer){
       return res.status(404).json({ message: 'Trainer not found' });
