@@ -61,7 +61,7 @@ const Message = require('../models/Message');
           $or: [{ email: email }]
         });
         if (!user) {
-          return res.status(400).json({ message: 'Invalid email or password' });
+          return res.status(400).json({ message: 'This email is not registered' });
         }
     
         const isMatch = await bcrypt.compare(password, user.password);
