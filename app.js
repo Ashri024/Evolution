@@ -8,13 +8,13 @@ const cors = require('cors');
 const morgan = require('morgan');
 const ScheduleRoutes = require('./routes/Schedule');
 const UserRoutes = require('./routes/User');
-const port = process.env.PORT || 3000;
 const Message = require('./models/Message');
 const mongoose = require('mongoose');
 const UploadRoute = require('./routes/Upload');
 
 // Load db and env
 require('dotenv').config();
+const port = process.env.PORT || 4000;
 connectDB();
 
 // middlewares
