@@ -2,7 +2,7 @@
   "name": "fitnessevolution",
   "version": "1.0.0",
   "description": "It is a fitness schedule scheduling app.",
-  "main": "index.js",
+  "main": "app.js",
   "scripts": {
     "dev": "nodemon app.js",
     "start": "node app.js"
