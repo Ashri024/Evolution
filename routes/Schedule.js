@@ -1,5 +1,5 @@
 const express = require('express');
-const { createSchedule, getSchedules,deleteAllSchedules,getAllSchedules, getPendingSchedules, getUpcomingSchedules, getCompletedSchedules, getRequestedSchedules, getSingleSchedule, rescheduleSchedules, changeStatus, upcomingTrainer, requestedTrainer, completedTrainer } = require('../controllers/Schedule');
+const { createSchedule, getSchedules,deleteAllSchedules,getAllSchedules, getPendingSchedules, getUpcomingSchedules, getCompletedSchedules, getRequestedSchedules, getSingleSchedule, rescheduleSchedules, changeStatus, upcomingTrainer, requestedTrainer, completedTrainer, getMyRequestedSchedules, deleteSchedule } = require('../controllers/Schedule');
 const authMiddleware = require('../middlewares/authMiddleware');
 const router = express.Router();
 // Append /v0/api/schedule before all routes
@@ -28,6 +28,12 @@ router.get('/myUpcoming',authMiddleware, getUpcomingSchedules);
 //Route to get all completed schedules for a user(both user and trainer)
 router.get('/myCompleted',authMiddleware, getCompletedSchedules);
 
+// Route to delete a schedule by a trainer
+router.delete('/deleteSchedule/:scheduleId', deleteSchedule);
+
+// Route to get all requested schedules for a user (for user only)
+router.get('/myRequested',authMiddleware, getMyRequestedSchedules);
+
 // Route to get all upcoming between a trainer and an admin
 router.get('/upcomingTrainer',authMiddleware, upcomingTrainer);
 
@@ -36,7 +42,6 @@ router.get('/requestedTrainer',authMiddleware, requestedTrainer);
 
 // Route to get all completed between a trainer and an admin
 router.get('/completedTrainer',authMiddleware, completedTrainer);
-
 
 // Route to get all requested schedule from a trainer(for admin only)
 router.get('/requestedSchedules',authMiddleware, getRequestedSchedules);

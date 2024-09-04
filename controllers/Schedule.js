@@ -24,10 +24,10 @@ const dayjs = require('dayjs');
         let inputDate = dayjs(date);
         let currentDate = dayjs();
         let ifDateCorrect = inputDate.isSame(currentDate, 'day') || inputDate.isAfter(currentDate, 'day');
-        let ifStartTimeCorrect = new Date(startTime) >= new Date();
         let ifEndTimeCorrect = new Date(endTime) > new Date(startTime);
-        if (!ifStartTimeCorrect || !ifEndTimeCorrect || !ifDateCorrect) {
-          return res.status(400).json({ message: 'Start time should be greater than current time and end time should be greater than start time' });
+        
+        if (!ifEndTimeCorrect || !ifDateCorrect) {
+          return res.status(400).json({ message: 'End time should be greater than start time and the date should be today or in the future' });
         }
     
         if (req.user.role === 'admin') {
@@ -108,6 +108,19 @@ const getSingleSchedule = async (req, res) => {
     res.status(500).json({ message: 'Server error', error });
   }
 }
+const deleteSchedule = async (req, res) => {
+  const { scheduleId } = req.params;
+  try {
+    const schedule = await ScheduleSchema.findById(scheduleId);
+    if (!schedule) {
+      return res.status(404).json({ message: 'Schedule not found' });
+    }
+    const deletedSchedule = await ScheduleSchema.findByIdAndDelete(scheduleId);
+    res.status(200).json(deletedSchedule);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+}
 
 const getUpcomingSchedules = async (req, res) => {
   try {
@@ -125,14 +138,17 @@ const getUpcomingSchedules = async (req, res) => {
     }
 
     let upcomingSchedules = schedules.filter(schedule => {
-      return new Date(schedule.startTime) >= new Date();
+      return new Date(schedule.endTime) >= new Date();
     });
+
+    // Sort the schedules by startTime
+    upcomingSchedules.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+
     res.status(200).json(upcomingSchedules);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 }
-
 const getCompletedSchedules = async (req, res) => {
   try {
     let schedules;
@@ -147,6 +163,9 @@ const getCompletedSchedules = async (req, res) => {
         { path: 'trainerId', select: 'fullName profileImage' }
       ]);
     }
+
+    // Sort the schedules by startTime
+    schedules.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
 
     res.status(200).json(schedules);
   } catch (error) {
@@ -168,9 +187,14 @@ const getPendingSchedules = async (req, res) => {
         { path: 'trainerId', select: 'fullName profileImage' }
       ]);
     }
+
     let pendingSchedules = schedules.filter(schedule => {
       return new Date(schedule.endTime) <= new Date();
     });
+
+    // Sort the schedules by startTime
+    pendingSchedules.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+
     res.status(200).json(pendingSchedules);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error });
@@ -186,16 +210,37 @@ const getRequestedSchedules = async (req, res) => {
         { path: 'userId', select: 'fullName gender age' },
         { path: 'trainerId', select: 'profileImage' }
       ]);
+
+      // Sort the schedules by startTime
+      schedules.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+
+      res.status(200).json(schedules);
     } else {
-      res.status(401).json({ message: 'You are not authorized to this route' });
+      res.status(401).json({ message: 'You are not authorized to access this route' });
     }
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+}
+const getMyRequestedSchedules = async (req, res) => {
+  const userId = req.user._id;
+  try {
+    if (req.user.role === 'admin') {
+      return res.status(401).json({ message: 'You are not authorized to this route' });
+    }
+
+    let schedules = await ScheduleSchema.find({ userId, status: 'waitingToApproved' }).populate([
+      { path: 'trainerId', select: 'fullName profileImage' }
+    ]);
+
+    // Sort the schedules by startTime
+    schedules.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
 
     res.status(200).json(schedules);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error });
   }
 }
-
 const changeStatus = async (req, res) => {
   const { scheduleId } = req.params;
   const { status } = req.body;
@@ -279,8 +324,10 @@ const upcomingTrainer = async (req, res) => {
       { path: 'userId', select: 'fullName gender age' },
       { path: 'trainerId', select: 'profileImage' }
     ]) 
-
-    res.status(200).json(schedules);
+    let upcomingSchedules = schedules.filter(schedule => {
+      return new Date(schedule.endTime) >= new Date();
+    });
+    res.status(200).json(upcomingSchedules);
 
   } catch (error) {
     res.status(500).json({ message: 'Server error', error });
@@ -355,4 +402,4 @@ const deleteAllSchedules = async (req, res) => {
   }
 }
 
-module.exports= {createSchedule, getSchedules,getAllSchedules,deleteAllSchedules,getUpcomingSchedules,getCompletedSchedules,getPendingSchedules,getRequestedSchedules,changeStatus,rescheduleSchedules,getSingleSchedule,upcomingTrainer,requestedTrainer,completedTrainer};
+module.exports= {createSchedule, getSchedules,getAllSchedules,deleteAllSchedules,getUpcomingSchedules,getCompletedSchedules,getPendingSchedules,getRequestedSchedules,changeStatus,rescheduleSchedules,getSingleSchedule,upcomingTrainer,requestedTrainer,completedTrainer,getMyRequestedSchedules,deleteSchedule};
